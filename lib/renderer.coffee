@@ -45,6 +45,39 @@ render = (text, filePath, callback) ->
     return callback(error) if error?
 
     html = createDOMPurify().sanitize(html, {ALLOW_UNKNOWN_PROTOCOLS: atom.config.get('markdown-preview.allowUnsafeProtocols')})
+    
+    # Replace {% img %} macros
+    re = /({% *img.* %})/
+    a = html.split(re)
+    html = ""
+    for s in a
+      if s.match(re)
+        fn = s.match(/'([^']*)'/)
+        if fn
+          if s.match(/centered\s*=\s*True/)
+            s = '<img src="' + fn[1] + '.png" style="display:block; margin-left:auto; margin-right:auto">'
+          else
+            s = '<img src="' + fn[1] + '.png">'
+      html = html.concat(s)
+
+    # Replace {% alert %}/{% endalert %} macros
+    re = /({% alert %})([^]*?)({% endalert %})/;
+    a = html.split(re)
+    html = ""
+    in_alert = false
+    for s in a
+      console.log(a)
+      if s == '{% alert %}'
+        in_alert = true
+        s = '</p><div style="color:#32516b; background-color:#dfebf5; border-color:#d3e3f1; padding:.75rem 1.25rem; position:relative; margin-bottom:1rem; border:1px solid transparent; border-radius:.25rem"><p style="margin:0">'
+      else if s == '{% endalert %}'
+        s = '</div>'
+        in_alert = false
+      else
+        if in_alert
+          s = s.replace(/<p>/g, '<p style="margin:0">')
+      html = html.concat(s)
+    
     html = resolveImagePaths(html, filePath)
     callback(null, html.trim())
 
